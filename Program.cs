@@ -5,9 +5,9 @@ using System.Windows.Forms;
 
 namespace CreationalDesignPatterns
 {
-	class Program
+	public static class Program
 	{
-		static void Main(string[] args)
+		public static void Main(string[] args)
 		{
 			Console.WriteLine("--- Shape Builder Interactive Demo ---");
 
@@ -64,7 +64,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static void ShowShapeWindow(Shape shape)
+	private static void ShowShapeWindow(Shape shape)
 		{
 			// Run WinForms on an STA thread
 			var t = new Thread(() =>
@@ -85,7 +85,7 @@ namespace CreationalDesignPatterns
 			t.Join();
 		}
 
-		static ShapeType PromptShapeType()
+	private static ShapeType PromptShapeType()
 		{
 			while (true)
 			{
@@ -107,7 +107,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static double PromptDouble(string prompt, double min = double.MinValue, double max = double.MaxValue)
+	private static double PromptDouble(string prompt, double min = double.MinValue, double max = double.MaxValue)
 		{
 			while (true)
 			{
@@ -131,7 +131,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static string PromptString(string prompt)
+	private static string PromptString(string prompt)
 		{
 			while (true)
 			{
@@ -142,7 +142,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static void DrawShape(Shape shape)
+	private static void DrawShape(Shape shape)
 		{
 			switch (shape.Type)
 			{
@@ -161,7 +161,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static void DrawRectangle(int width, int height, string color)
+	private static void DrawRectangle(int width, int height, string color)
 		{
 			width = Math.Clamp(width, 1, 80);
 			height = Math.Clamp(height, 1, 40);
@@ -173,7 +173,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static void DrawTriangle(int baseWidth, int height, string color)
+	private static void DrawTriangle(int baseWidth, int height, string color)
 		{
 			baseWidth = Math.Clamp(baseWidth, 1, 79);
 			height = Math.Clamp(height, 1, 40);
@@ -189,7 +189,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static void DrawCircle(int radius, string color)
+	private static void DrawCircle(int radius, string color)
 		{
 			radius = Math.Clamp(radius, 1, 20);
 			Console.WriteLine($"[{color}] Circle radius={radius}");
@@ -207,7 +207,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static bool IsValidShape(Shape shape, out string reason)
+	private static bool IsValidShape(Shape shape, out string reason)
 		{
 			reason = string.Empty;
 			if (shape == null)
