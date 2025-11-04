@@ -35,6 +35,19 @@ namespace CreationalDesignPatterns
 					break;
 			}
 
+			// Basic null/validation checks after construction
+			if (shape == null)
+			{
+				Console.WriteLine("Shape construction failed or returned null.");
+				return;
+			}
+
+			if (!IsValidShape(shape, out var reason))
+			{
+				Console.WriteLine($"Constructed shape is invalid: {reason}");
+				return;
+			}
+
 			Console.WriteLine();
 			Console.WriteLine("Built shape:");
 			Console.WriteLine(shape);
@@ -192,6 +205,68 @@ namespace CreationalDesignPatterns
 				}
 				Console.WriteLine();
 			}
+		}
+
+		static bool IsValidShape(Shape shape, out string reason)
+		{
+			reason = string.Empty;
+			if (shape == null)
+			{
+				reason = "shape is null";
+				return false;
+			}
+
+			if (double.IsNaN(shape.Size1) || double.IsInfinity(shape.Size1))
+			{
+				reason = "Size1 is not a valid number";
+				return false;
+			}
+
+			switch (shape.Type)
+			{
+				case ShapeType.Circle:
+					if (shape.Size1 <= 0)
+					{
+						reason = "Circle radius must be > 0";
+						return false;
+					}
+					break;
+				case ShapeType.Rectangle:
+					if (double.IsNaN(shape.Size2) || double.IsInfinity(shape.Size2))
+					{
+						reason = "Size2 is not a valid number";
+						return false;
+					}
+					if (shape.Size1 <= 0 || shape.Size2 <= 0)
+					{
+						reason = "Rectangle width and height must be > 0";
+						return false;
+					}
+					break;
+				case ShapeType.Triangle:
+					if (double.IsNaN(shape.Size2) || double.IsInfinity(shape.Size2))
+					{
+						reason = "Size2 is not a valid number";
+						return false;
+					}
+					if (shape.Size1 <= 0 || shape.Size2 <= 0)
+					{
+						reason = "Triangle base and height must be > 0";
+						return false;
+					}
+					break;
+				default:
+					reason = "Unknown shape type";
+					return false;
+			}
+
+			if (string.IsNullOrWhiteSpace(shape.Color))
+			{
+				reason = "Color is empty";
+				return false;
+			}
+
+			return true;
 		}
 	}
 }
