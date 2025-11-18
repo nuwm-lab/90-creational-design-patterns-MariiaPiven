@@ -65,25 +65,49 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static void ShowShapeWindow(Shape shape)
+		/// <summary>
+		/// Show the shape in a WinForms window. By default this does not block the caller thread
+		/// (the form runs on a background STA thread). Pass <c>block: true</c> to wait until the
+		/// window closes.
+		/// </summary>
+		static void ShowShapeWindow(Shape shape, bool block = false)
 		{
-			// Run WinForms on an STA thread
+			// Run WinForms on an STA thread. If block == false we don't Join so the main thread continues.
+			var closedEvent = new System.Threading.ManualResetEventSlim(false);
 			var t = new Thread(() =>
 			{
 				try
 				{
 					Application.EnableVisualStyles();
 					Application.SetCompatibleTextRenderingDefault(false);
-					Application.Run(new ShapeForm(shape));
+					var form = new ShapeForm(shape);
+					// Signal when the form closes so other threads can observe it if needed
+					form.FormClosed += (s, e) => closedEvent.Set();
+					Application.Run(form);
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine($"Failed to show window: {ex.Message}");
+					// Provide detailed info to the console for diagnostics and also attempt a MessageBox where possible.
+					var msg = $"Failed to show window: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}";
+					try { Console.WriteLine(msg); } catch { }
+					try { MessageBox.Show(msg, "Shape Viewer Error", MessageBoxButtons.OK, MessageBoxIcon.Error); } catch { }
 				}
 			});
 			t.SetApartmentState(ApartmentState.STA);
+			// Run as foreground thread so the process keeps running until the window is closed.
+			// This prevents the window from being terminated abruptly when the main thread exits.
+			t.IsBackground = false;
 			t.Start();
-			t.Join();
+			if (block)
+			{
+				// Caller requested to block until the window closes.
+				// Wait for the UI thread to finish (which happens after the form closes)
+				closedEvent.Wait();
+			}
+			else
+			{
+				Console.WriteLine("Opened shape window (non-blocking) on a foreground UI thread. The process will remain running until you close the window.");
+			}
 		}
 
 		static ShapeType PromptShapeType()
