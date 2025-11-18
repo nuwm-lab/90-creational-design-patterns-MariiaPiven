@@ -15,7 +15,6 @@ Triangle
 public interface IShape
 {
 PointF Position { get; }
-SizeF Size { get; }
 Color Color { get; }
 void Draw(Graphics g);
 }
@@ -23,80 +22,103 @@ void Draw(Graphics g);
 public abstract class ShapeBase : IShape
 {
 public PointF Position { get; protected set; }
-public SizeF Size { get; protected set; }
 public Color Color { get; protected set; }
 
-protected ShapeBase(PointF pos, SizeF size, Color color)
-{
-Position = pos;
-Size = size;
-Color = color;
-}
+	protected ShapeBase(PointF pos, Color color)
+	{
+		Position = pos;
+		Color = color;
+	}
 
 public abstract void Draw(Graphics g);
 }
 
 public class RectangleShape : ShapeBase
 {
-public RectangleShape(PointF pos, SizeF size, Color color) : base(pos, size, color) { }
-public override void Draw(Graphics g)
-{
-using var brush = new SolidBrush(Color);
-g.FillRectangle(brush, Position.X, Position.Y, Size.Width, Size.Height);
-g.DrawRectangle(Pens.Black, Position.X, Position.Y, Size.Width, Size.Height);
-}
+	public float Width { get; }
+	public float Height { get; }
+
+	public RectangleShape(PointF pos, float width, float height, Color color) : base(pos, color)
+	{
+		Width = width;
+		Height = height;
+	}
+
+	public override void Draw(Graphics g)
+	{
+		using var brush = new SolidBrush(Color);
+		g.FillRectangle(brush, Position.X, Position.Y, Width, Height);
+		g.DrawRectangle(Pens.Black, Position.X, Position.Y, Width, Height);
+	}
 }
 
 public class EllipseShape : ShapeBase
 {
-public EllipseShape(PointF pos, SizeF size, Color color) : base(pos, size, color) { }
-public override void Draw(Graphics g)
-{
-using var brush = new SolidBrush(Color);
-g.FillEllipse(brush, Position.X, Position.Y, Size.Width, Size.Height);
-g.DrawEllipse(Pens.Black, Position.X, Position.Y, Size.Width, Size.Height);
-}
+	public float Width { get; }
+	public float Height { get; }
+
+	public EllipseShape(PointF pos, float width, float height, Color color) : base(pos, color)
+	{
+		Width = width;
+		Height = height;
+	}
+
+	public override void Draw(Graphics g)
+	{
+		using var brush = new SolidBrush(Color);
+		g.FillEllipse(brush, Position.X, Position.Y, Width, Height);
+		g.DrawEllipse(Pens.Black, Position.X, Position.Y, Width, Height);
+	}
 }
 
 public class TriangleShape : ShapeBase
 {
-public TriangleShape(PointF pos, SizeF size, Color color) : base(pos, size, color) { }
-public override void Draw(Graphics g)
-{
-var p1 = new PointF(Position.X + Size.Width / 2, Position.Y);
-var p2 = new PointF(Position.X, Position.Y + Size.Height);
-var p3 = new PointF(Position.X + Size.Width, Position.Y + Size.Height);
+	public float BaseWidth { get; }
+	public float Height { get; }
 
-PointF[] pts = { p1, p2, p3 };
+	public TriangleShape(PointF pos, float baseWidth, float height, Color color) : base(pos, color)
+	{
+		BaseWidth = baseWidth;
+		Height = height;
+	}
 
-using var brush = new SolidBrush(Color);
-g.FillPolygon(brush, pts);
-g.DrawPolygon(Pens.Black, pts);
-}
+	public override void Draw(Graphics g)
+	{
+		var p1 = new PointF(Position.X + BaseWidth / 2, Position.Y);
+		var p2 = new PointF(Position.X, Position.Y + Height);
+		var p3 = new PointF(Position.X + BaseWidth, Position.Y + Height);
+
+		PointF[] pts = { p1, p2, p3 };
+
+		using var brush = new SolidBrush(Color);
+		g.FillPolygon(brush, pts);
+		g.DrawPolygon(Pens.Black, pts);
+	}
 }
 
 // === BUILDER ===
 public class ShapeBuilder
 {
 private ShapeType _type = ShapeType.Rectangle;
-private SizeF _size = new SizeF(80, 80);
+	private float _width = 80f;
+	private float _height = 80f;
 private Color _color = Color.CornflowerBlue;
 private PointF _position = new PointF(10, 10);
 
 public ShapeBuilder SetType(ShapeType t) { _type = t; return this; }
-public ShapeBuilder SetSize(float w, float h) { _size = new SizeF(w, h); return this; }
-public ShapeBuilder SetColor(Color c) { _color = c; return this; }
-public ShapeBuilder SetPosition(float x, float y) { _position = new PointF(x, y); return this; }
+	public ShapeBuilder SetSize(float w, float h) { _width = w; _height = h; return this; }
+	public ShapeBuilder SetColor(Color c) { _color = c; return this; }
+	public ShapeBuilder SetPosition(float x, float y) { _position = new PointF(x, y); return this; }
 
 public IShape Build()
 {
-return _type switch
-{
-ShapeType.Rectangle => new RectangleShape(_position, _size, _color),
-ShapeType.Ellipse => new EllipseShape(_position, _size, _color),
-ShapeType.Triangle => new TriangleShape(_position, _size, _color),
-_ => throw new Exception("Unknown shape")
-};
+	return _type switch
+	{
+		ShapeType.Rectangle => new RectangleShape(_position, _width, _height, _color),
+		ShapeType.Ellipse => new EllipseShape(_position, _width, _height, _color),
+		ShapeType.Triangle => new TriangleShape(_position, _width, _height, _color),
+		_ => throw new Exception("Unknown shape")
+	};
 }
 }
 
