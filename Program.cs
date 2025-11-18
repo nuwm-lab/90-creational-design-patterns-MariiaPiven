@@ -1,273 +1,228 @@
 using System;
-using System.Globalization;
-using System.Threading;
+using System.Collections.Generic;
+using System.Drawing;
 using System.Windows.Forms;
 
-namespace CreationalDesignPatterns
+namespace ShapesBuilderSingleFile
 {
-	class Program
+public enum ShapeType
+{
+Rectangle,
+Ellipse,
+Triangle
+}
+
+public interface IShape
+{
+PointF Position { get; }
+SizeF Size { get; }
+Color Color { get; }
+void Draw(Graphics g);
+}
+
+public abstract class ShapeBase : IShape
+{
+public PointF Position { get; protected set; }
+public SizeF Size { get; protected set; }
+public Color Color { get; protected set; }
+
+protected ShapeBase(PointF pos, SizeF size, Color color)
+{
+Position = pos;
+Size = size;
+Color = color;
+}
+
+public abstract void Draw(Graphics g);
+}
+
+public class RectangleShape : ShapeBase
+{
+public RectangleShape(PointF pos, SizeF size, Color color) : base(pos, size, color) { }
+public override void Draw(Graphics g)
+{
+using var brush = new SolidBrush(Color);
+g.FillRectangle(brush, Position.X, Position.Y, Size.Width, Size.Height);
+g.DrawRectangle(Pens.Black, Position.X, Position.Y, Size.Width, Size.Height);
+}
+}
+
+public class EllipseShape : ShapeBase
+{
+public EllipseShape(PointF pos, SizeF size, Color color) : base(pos, size, color) { }
+public override void Draw(Graphics g)
+{
+using var brush = new SolidBrush(Color);
+g.FillEllipse(brush, Position.X, Position.Y, Size.Width, Size.Height);
+g.DrawEllipse(Pens.Black, Position.X, Position.Y, Size.Width, Size.Height);
+}
+}
+
+public class TriangleShape : ShapeBase
+{
+public TriangleShape(PointF pos, SizeF size, Color color) : base(pos, size, color) { }
+public override void Draw(Graphics g)
+{
+var p1 = new PointF(Position.X + Size.Width / 2, Position.Y);
+var p2 = new PointF(Position.X, Position.Y + Size.Height);
+var p3 = new PointF(Position.X + Size.Width, Position.Y + Size.Height);
+
+PointF[] pts = { p1, p2, p3 };
+
+using var brush = new SolidBrush(Color);
+g.FillPolygon(brush, pts);
+g.DrawPolygon(Pens.Black, pts);
+}
+}
+
+// === BUILDER ===
+public class ShapeBuilder
+{
+private ShapeType _type = ShapeType.Rectangle;
+private SizeF _size = new SizeF(80, 80);
+private Color _color = Color.CornflowerBlue;
+private PointF _position = new PointF(10, 10);
+
+public ShapeBuilder SetType(ShapeType t) { _type = t; return this; }
+public ShapeBuilder SetSize(float w, float h) { _size = new SizeF(w, h); return this; }
+public ShapeBuilder SetColor(Color c) { _color = c; return this; }
+public ShapeBuilder SetPosition(float x, float y) { _position = new PointF(x, y); return this; }
+
+public IShape Build()
+{
+return _type switch
+{
+ShapeType.Rectangle => new RectangleShape(_position, _size, _color),
+ShapeType.Ellipse => new EllipseShape(_position, _size, _color),
+ShapeType.Triangle => new TriangleShape(_position, _size, _color),
+_ => throw new Exception("Unknown shape")
+};
+}
+}
+
+// === ГОЛОВНА ФОРМА ===
+public class MainForm : Form
+{
+private readonly List<IShape> shapes;
+private readonly Panel canvas = new();
+
+public MainForm(List<IShape> initialShapes = null)
+{
+	Text = "Builder – Shapes Demo";
+	Size = new Size(900, 600);
+
+	// initialize shapes list from provided initial shapes or empty
+	shapes = initialShapes != null ? new List<IShape>(initialShapes) : new List<IShape>();
+
+	canvas.Location = new Point(10, 10);
+	canvas.Size = new Size(860, 540);
+	canvas.BackColor = Color.White;
+	canvas.Paint += (s, e) =>
 	{
-		static void Main(string[] args)
+		e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+		foreach (var shape in shapes)
+			shape.Draw(e.Graphics);
+	};
+	Controls.Add(canvas);
+}
+}
+
+// === ПУСК ===
+internal static class Program
+{
+[STAThread]
+static void Main()
+{
+	// Interactive creation of shapes before launching the form
+	Console.WriteLine("--- Shapes Builder Interactive Setup ---");
+	int count = PromptInt("How many shapes do you want to create? (1-6): ", 1, 12);
+	var shapes = new List<IShape>();
+	for (int i = 0; i < count; i++)
+	{
+		Console.WriteLine($"\nShape #{i + 1}:");
+		var type = PromptShapeType();
+		float w = PromptFloat("Enter width (or base) in pixels (number): ", 1, 1000);
+		float h = PromptFloat("Enter height in pixels (number): ", 1, 1000);
+		var colorName = PromptString("Enter color name (e.g. Red, Blue): ");
+		Color color = Color.FromName(colorName);
+		if (!color.IsKnownColor && color.A == 0)
 		{
-			Console.WriteLine("--- Shape Builder Interactive Demo ---");
-
-			var type = PromptShapeType();
-			Shape shape = null;
-
-			switch (type)
-			{
-				case ShapeType.Circle:
-					var radius = PromptDouble("Enter radius (number): ", min: 0.1);
-					var colorC = PromptString("Enter color: ");
-					shape = new CircleBuilder().Reset().SetRadius(radius).SetColor(colorC).Build();
-					break;
-				case ShapeType.Rectangle:
-					var width = PromptDouble("Enter width (number): ", min: 1);
-					var height = PromptDouble("Enter height (number): ", min: 1);
-					var colorR = PromptString("Enter color: ");
-					shape = new RectangleBuilder().Reset().SetWidthHeight(width, height).SetColor(colorR).Build();
-					break;
-				case ShapeType.Triangle:
-					var b = PromptDouble("Enter base (number): ", min: 1);
-					var h = PromptDouble("Enter height (number): ", min: 1);
-					var colorT = PromptString("Enter color: ");
-					shape = new TriangleBuilder().Reset().SetBaseHeight(b, h).SetColor(colorT).Build();
-					break;
-			}
-
-			// Basic null/validation checks after construction
-			if (shape == null)
-			{
-				Console.WriteLine("Shape construction failed or returned null.");
-				return;
-			}
-
-			if (!IsValidShape(shape, out var reason))
-			{
-				Console.WriteLine($"Constructed shape is invalid: {reason}");
-				return;
-			}
-
-			Console.WriteLine();
-			Console.WriteLine("Built shape:");
-			Console.WriteLine(shape);
-			Console.WriteLine();
-			Console.WriteLine("Drawing (ASCII):");
-			DrawShape(shape);
-
-			Console.WriteLine();
-			Console.Write("Open graphical window to display shape? (y/n): ");
-			var ans = Console.ReadLine()?.Trim().ToLowerInvariant();
-			if (ans == "y" || ans == "yes")
-			{
-				ShowShapeWindow(shape);
-			}
+			Console.WriteLine("Unknown color name, defaulting to Black.");
+			color = Color.Black;
 		}
 
-		static void ShowShapeWindow(Shape shape)
-		{
-			// Run WinForms on an STA thread
-			var t = new Thread(() =>
-			{
-				try
-				{
-					Application.EnableVisualStyles();
-					Application.SetCompatibleTextRenderingDefault(false);
-					Application.Run(new ShapeForm(shape));
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"Failed to show window: {ex.Message}");
-				}
-			});
-			t.SetApartmentState(ApartmentState.STA);
-			t.Start();
-			t.Join();
-		}
+		// compute a position so shapes are not overlapping too much
+		float x = 50 + i * 200 % Math.Max(200, (int)w + 20);
+		float y = 50 + (i / 4) * 150;
 
-		static ShapeType PromptShapeType()
-		{
-			while (true)
-			{
-				Console.WriteLine("Choose shape type: (1) Circle  (2) Rectangle  (3) Triangle");
-				Console.Write("Enter number or name: ");
-				var input = Console.ReadLine()?.Trim();
-				if (string.IsNullOrEmpty(input)) continue;
+		var shape = new ShapeBuilder()
+			.SetType(type)
+			.SetPosition(x, y)
+			.SetColor(color)
+			.SetSize(w, h)
+			.Build();
 
-				if (int.TryParse(input, out var n))
-				{
-					if (n == 1) return ShapeType.Circle;
-					if (n == 2) return ShapeType.Rectangle;
-					if (n == 3) return ShapeType.Triangle;
-				}
+		shapes.Add(shape);
+	}
 
-				if (Enum.TryParse<ShapeType>(input, true, out var t)) return t;
+	ApplicationConfiguration.Initialize();
+	Application.Run(new MainForm(shapes));
+}
 
-				Console.WriteLine("Invalid selection. Try again.");
-			}
-		}
-
-		static double PromptDouble(string prompt, double min = double.MinValue, double max = double.MaxValue)
-		{
-			while (true)
-			{
-				Console.Write(prompt);
-				var s = Console.ReadLine();
-				if (double.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) || double.TryParse(s, out v))
-				{
-					if (v < min)
-					{
-						Console.WriteLine($"Value must be >= {min}");
-						continue;
-					}
-					if (v > max)
-					{
-						Console.WriteLine($"Value must be <= {max}");
-						continue;
-					}
-					return v;
-				}
-				Console.WriteLine("Invalid number, try again.");
-			}
-		}
-
-		static string PromptString(string prompt)
-		{
-			while (true)
-			{
-				Console.Write(prompt);
-				var s = Console.ReadLine();
-				if (!string.IsNullOrWhiteSpace(s)) return s.Trim();
-				Console.WriteLine("Please enter a non-empty value.");
-			}
-		}
-
-		static void DrawShape(Shape shape)
-		{
-			switch (shape.Type)
-			{
-				case ShapeType.Circle:
-					DrawCircle((int)Math.Round(shape.Size1), shape.Color);
-					break;
-				case ShapeType.Rectangle:
-					DrawRectangle((int)Math.Round(shape.Size1), (int)Math.Round(shape.Size2), shape.Color);
-					break;
-				case ShapeType.Triangle:
-					DrawTriangle((int)Math.Round(shape.Size1), (int)Math.Round(shape.Size2), shape.Color);
-					break;
-				default:
-					Console.WriteLine("No drawing available for this shape.");
-					break;
-			}
-		}
-
-		static void DrawRectangle(int width, int height, string color)
-		{
-			width = Math.Clamp(width, 1, 80);
-			height = Math.Clamp(height, 1, 40);
-			Console.WriteLine($"[{color}] Rectangle {width}x{height}");
-			for (int r = 0; r < height; r++)
-			{
-				for (int c = 0; c < width; c++) Console.Write("#");
-				Console.WriteLine();
-			}
-		}
-
-		static void DrawTriangle(int baseWidth, int height, string color)
-		{
-			baseWidth = Math.Clamp(baseWidth, 1, 79);
-			height = Math.Clamp(height, 1, 40);
-			Console.WriteLine($"[{color}] Triangle base={baseWidth} height={height}");
-			// Draw as isosceles triangle
-			for (int row = 0; row < height; row++)
-			{
-				double t = (double)row / Math.Max(1, height - 1);
-				int stars = 1 + (int)Math.Round(t * (baseWidth - 1));
-				int pad = (baseWidth - stars) / 2;
-				Console.Write(new string(' ', pad));
-				Console.WriteLine(new string('*', Math.Max(1, stars)));
-			}
-		}
-
-		static void DrawCircle(int radius, string color)
-		{
-			radius = Math.Clamp(radius, 1, 20);
-			Console.WriteLine($"[{color}] Circle radius={radius}");
-			int diameter = radius * 2 + 1;
-			for (int y = 0; y < diameter; y++)
-			{
-				for (int x = 0; x < diameter; x++)
-				{
-					double dx = x - radius;
-					double dy = y - radius;
-					double d = Math.Sqrt(dx * dx + dy * dy);
-					Console.Write(d <= radius + 0.3 ? '*' : ' ');
-				}
-				Console.WriteLine();
-			}
-		}
-
-		static bool IsValidShape(Shape shape, out string reason)
-		{
-			reason = string.Empty;
-			if (shape == null)
-			{
-				reason = "shape is null";
-				return false;
-			}
-
-			if (double.IsNaN(shape.Size1) || double.IsInfinity(shape.Size1))
-			{
-				reason = "Size1 is not a valid number";
-				return false;
-			}
-
-			switch (shape.Type)
-			{
-				case ShapeType.Circle:
-					if (shape.Size1 <= 0)
-					{
-						reason = "Circle radius must be > 0";
-						return false;
-					}
-					break;
-				case ShapeType.Rectangle:
-					if (double.IsNaN(shape.Size2) || double.IsInfinity(shape.Size2))
-					{
-						reason = "Size2 is not a valid number";
-						return false;
-					}
-					if (shape.Size1 <= 0 || shape.Size2 <= 0)
-					{
-						reason = "Rectangle width and height must be > 0";
-						return false;
-					}
-					break;
-				case ShapeType.Triangle:
-					if (double.IsNaN(shape.Size2) || double.IsInfinity(shape.Size2))
-					{
-						reason = "Size2 is not a valid number";
-						return false;
-					}
-					if (shape.Size1 <= 0 || shape.Size2 <= 0)
-					{
-						reason = "Triangle base and height must be > 0";
-						return false;
-					}
-					break;
-				default:
-					reason = "Unknown shape type";
-					return false;
-			}
-
-			if (string.IsNullOrWhiteSpace(shape.Color))
-			{
-				reason = "Color is empty";
-				return false;
-			}
-
-			return true;
-		}
+static int PromptInt(string prompt, int min, int max)
+{
+	while (true)
+	{
+		Console.Write(prompt);
+		var s = Console.ReadLine();
+		if (int.TryParse(s, out var v) && v >= min && v <= max) return v;
+		Console.WriteLine($"Enter integer between {min} and {max}.");
 	}
 }
 
+static float PromptFloat(string prompt, float min, float max)
+{
+	while (true)
+	{
+		Console.Write(prompt);
+		var s = Console.ReadLine();
+		if (float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var v) || float.TryParse(s, out v))
+		{
+			if (v >= min && v <= max) return v;
+		}
+		Console.WriteLine($"Enter number between {min} and {max}.");
+	}
+}
+
+static string PromptString(string prompt)
+{
+	while (true)
+	{
+		Console.Write(prompt);
+		var s = Console.ReadLine();
+		if (!string.IsNullOrWhiteSpace(s)) return s.Trim();
+		Console.WriteLine("Please enter a non-empty value.");
+	}
+}
+
+static ShapeType PromptShapeType()
+{
+	while (true)
+	{
+		Console.WriteLine("Choose shape type: (1) Rectangle  (2) Ellipse  (3) Triangle");
+		Console.Write("Enter number or name: ");
+		var input = Console.ReadLine()?.Trim();
+		if (string.IsNullOrEmpty(input)) continue;
+
+		if (int.TryParse(input, out var n))
+		{
+			if (n == 1) return ShapeType.Rectangle;
+			if (n == 2) return ShapeType.Ellipse;
+			if (n == 3) return ShapeType.Triangle;
+		}
+		if (Enum.TryParse<ShapeType>(input, true, out var t)) return t;
+		Console.WriteLine("Invalid selection. Try again.");
+	}
+}
+}
+}
