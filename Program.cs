@@ -2,7 +2,6 @@ using System;
 using System.Globalization;
 using System.Threading;
 using System.Windows.Forms;
-using CreationalDesignPatterns.Builders;
 
 namespace CreationalDesignPatterns
 {
@@ -15,37 +14,39 @@ namespace CreationalDesignPatterns
 			var type = PromptShapeType();
 			Shape shape = null;
 
-			switch (type)
+			try
 			{
-				case ShapeType.Circle:
-					var radius = PromptDouble("Enter radius (number): ", min: 0.1);
-					var colorC = PromptString("Enter color: ");
-					shape = new CircleBuilder().Reset().SetRadius(radius).SetColor(colorC).Build();
-					break;
-				case ShapeType.Rectangle:
-					var width = PromptDouble("Enter width (number): ", min: 1);
-					var height = PromptDouble("Enter height (number): ", min: 1);
-					var colorR = PromptString("Enter color: ");
-					shape = new RectangleBuilder().Reset().SetWidthHeight(width, height).SetColor(colorR).Build();
-					break;
-				case ShapeType.Triangle:
-					var b = PromptDouble("Enter base (number): ", min: 1);
-					var h = PromptDouble("Enter height (number): ", min: 1);
-					var colorT = PromptString("Enter color: ");
-					shape = new TriangleBuilder().Reset().SetBaseHeight(b, h).SetColor(colorT).Build();
-					break;
+				switch (type)
+				{
+					case ShapeType.Circle:
+						var radius = PromptDouble("Enter radius (number): ", min: 0.1);
+						var colorC = PromptString("Enter color: ");
+						shape = new CircleBuilder().Reset().SetRadius(radius).SetColor(colorC).Build();
+						break;
+					case ShapeType.Rectangle:
+						var width = PromptDouble("Enter width (number): ", min: 1);
+						var height = PromptDouble("Enter height (number): ", min: 1);
+						var colorR = PromptString("Enter color: ");
+						shape = new RectangleBuilder().Reset().SetWidthHeight(width, height).SetColor(colorR).Build();
+						break;
+					case ShapeType.Triangle:
+						var b = PromptDouble("Enter base (number): ", min: 1);
+						var h = PromptDouble("Enter height (number): ", min: 1);
+						var colorT = PromptString("Enter color: ");
+						shape = new TriangleBuilder().Reset().SetBaseHeight(b, h).SetColor(colorT).Build();
+						break;
+				}
 			}
-
-			// Basic null/validation checks after construction
-			if (shape == null)
+			catch (Exception ex)
 			{
-				Console.WriteLine("Shape construction failed or returned null.");
+				Console.WriteLine($"Shape construction failed: {ex.Message}");
 				return;
 			}
 
-			if (!IsValidShape(shape, out var reason))
+			// Basic null check after construction
+			if (shape == null)
 			{
-				Console.WriteLine($"Constructed shape is invalid: {reason}");
+				Console.WriteLine("Shape construction failed or returned null.");
 				return;
 			}
 
@@ -85,6 +86,7 @@ namespace CreationalDesignPatterns
 			t.Start();
 			t.Join();
 		}
+
 
 		static ShapeType PromptShapeType()
 		{
@@ -208,66 +210,7 @@ namespace CreationalDesignPatterns
 			}
 		}
 
-		static bool IsValidShape(Shape shape, out string reason)
-		{
-			reason = string.Empty;
-			if (shape == null)
-			{
-				reason = "shape is null";
-				return false;
-			}
 
-			if (double.IsNaN(shape.Size1) || double.IsInfinity(shape.Size1))
-			{
-				reason = "Size1 is not a valid number";
-				return false;
-			}
-
-			switch (shape.Type)
-			{
-				case ShapeType.Circle:
-					if (shape.Size1 <= 0)
-					{
-						reason = "Circle radius must be > 0";
-						return false;
-					}
-					break;
-				case ShapeType.Rectangle:
-					if (double.IsNaN(shape.Size2) || double.IsInfinity(shape.Size2))
-					{
-						reason = "Size2 is not a valid number";
-						return false;
-					}
-					if (shape.Size1 <= 0 || shape.Size2 <= 0)
-					{
-						reason = "Rectangle width and height must be > 0";
-						return false;
-					}
-					break;
-				case ShapeType.Triangle:
-					if (double.IsNaN(shape.Size2) || double.IsInfinity(shape.Size2))
-					{
-						reason = "Size2 is not a valid number";
-						return false;
-					}
-					if (shape.Size1 <= 0 || shape.Size2 <= 0)
-					{
-						reason = "Triangle base and height must be > 0";
-						return false;
-					}
-					break;
-				default:
-					reason = "Unknown shape type";
-					return false;
-			}
-
-			if (string.IsNullOrWhiteSpace(shape.Color))
-			{
-				reason = "Color is empty";
-				return false;
-			}
-
-			return true;
-		}
 	}
 }
+
